@@ -212,10 +212,10 @@ locals {
     if lookup(v, "mode", "") == "virtual-node-pool"
   }
 
-  # Enabled worker_pool map entries for instance pools
+  # Enabled worker_pool map entries for instance pools and GPU memory clusters
   enabled_instance_configs = {
     for k, v in local.enabled_worker_pools : k => v
-    if contains(["cluster-network", "instance-pool"], lookup(v, "mode", ""))
+    if contains(["cluster-network", "instance-pool", "gpu-memory-cluster"], lookup(v, "mode", ""))
   }
 
   # Enabled worker_pool map entries for instance pools
@@ -240,6 +240,11 @@ locals {
     for k, v in local.enabled_worker_pools : k => v if lookup(v, "mode", "") == "compute-cluster"
   }
 
+  # Enabled worker_pool map entries for GPU memory clusters
+  enabled_gpu_memory_clusters = {
+    for k, v in local.enabled_worker_pools : k => v if lookup(v, "mode", "") == "gpu-memory-cluster"
+  }
+
   # Prepare a map workers node enabled for compute_clusters { "pool_id###worker_id" => pool_values }
   compute_cluster_instance_ids_map = { for k, v in local.enabled_compute_clusters : k => toset(lookup(v, "instance_ids", [])) }
   compute_cluster_instance_ids     = toset(concat(flatten([for k, v in local.compute_cluster_instance_ids_map : [for id in v : format("%s###%s", k, id)]])))
@@ -257,11 +262,12 @@ locals {
   }
 
   # Maps of worker pool OCI resources by pool name enriched with desired/custom parameters for various modes
-  worker_node_pools         = { for k, v in merge(oci_containerengine_node_pool.tfscaled_workers, oci_containerengine_node_pool.autoscaled_workers) : k => merge(lookup(local.worker_pools_final, k, {}), v) }
-  worker_virtual_node_pools = { for k, v in oci_containerengine_virtual_node_pool.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
-  worker_instance_pools     = { for k, v in merge(oci_core_instance_pool.tfscaled_workers, oci_core_instance_pool.autoscaled_workers) : k => merge(lookup(local.worker_pools_final, k, {}), v) }
-  worker_cluster_networks   = { for k, v in oci_core_cluster_network.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
-  worker_instances          = { for k, v in oci_core_instance.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
+  worker_node_pools          = { for k, v in merge(oci_containerengine_node_pool.tfscaled_workers, oci_containerengine_node_pool.autoscaled_workers) : k => merge(lookup(local.worker_pools_final, k, {}), v) }
+  worker_virtual_node_pools  = { for k, v in oci_containerengine_virtual_node_pool.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
+  worker_instance_pools      = { for k, v in merge(oci_core_instance_pool.tfscaled_workers, oci_core_instance_pool.autoscaled_workers) : k => merge(lookup(local.worker_pools_final, k, {}), v) }
+  worker_cluster_networks    = { for k, v in oci_core_cluster_network.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
+  worker_gpu_memory_clusters = { for k, v in oci_core_compute_gpu_memory_cluster.workers : k => merge(lookup(local.worker_pools_final, local.all_gmfs[k].pool_name, {}), v) }
+  worker_instances           = { for k, v in oci_core_instance.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
 
   # Combined map of outputs by pool name for all modes excluding 'instance' (output separately)
   worker_pools_output = merge(
@@ -269,6 +275,7 @@ locals {
     local.worker_virtual_node_pools,
     local.worker_instance_pools,
     local.worker_cluster_networks,
+    local.worker_gpu_memory_clusters,
   )
 
   # OCIDs of pool resources by pool name for modes: 'node-pool', 'virtual-node-pool', 'instance-pool', 'cluster-network'
@@ -298,16 +305,16 @@ locals {
     "22.04"         = "jammy"
     "24.04"         = "noble"
     "22.04 Minimal" = "jammy"
-    "24.04 Minimal" = "noble"
+    "24.04 Minimal" = "nobble"
   }
 
   ubuntu_worker_pools = {
     for k, v in local.enabled_worker_pools : k => {
       kubernetes_major_version = substr(lookup(v, "kubernetes_version", ""), 1, 4)
       kubernetes_minor_version = substr(lookup(v, "kubernetes_version", ""), 1, -1)
-      ubuntu_release           = lookup(lookup(data.oci_core_image.workers, k, {}), "operating_system_version", null) != null ? lookup(lookup(data.oci_core_image.workers, k, {}), "operating_system_version") : lookup(v, "os_version", null)
+      ubuntu_release           = lookup(data.oci_core_image.workers[k], "operating_system_version", null) != null ? lookup(data.oci_core_image.workers[k], "operating_system_version") : lookup(v, "os_version", null)
     }
     if lookup(v, "mode", var.worker_pool_mode) != "virtual-node-pool" &&
-    contains(coalescelist(split(" ", lookup(lookup(data.oci_core_image.workers, k, {}), "operating_system", "")), [lookup(v, "os", "")]), "Ubuntu")
+    contains(coalescelist(split(" ", lookup(data.oci_core_image.workers[k], "operating_system", "")), [lookup(v, "os", "")]), "Ubuntu")
   }
 }
