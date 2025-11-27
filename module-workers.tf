@@ -37,7 +37,7 @@ module "workers" {
   cluster_id                        = coalesce(var.cluster_id, one(module.cluster[*].cluster_id))
   cluster_type                      = var.cluster_type
   kubernetes_version                = var.kubernetes_version
-  allow_short_container_image_names = var.allow_short_container_image_names
+  # allow_short_container_image_names = var.allow_short_container_image_names
 
   # Compute clusters
   compute_clusters = var.worker_compute_clusters
