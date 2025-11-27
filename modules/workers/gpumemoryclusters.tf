@@ -2,12 +2,12 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 # GPU Memory Clusters (GMC) for worker pools with mode = "gpu-memory-cluster"
-# This creates for EACH GMF ID provided in gpu_memory_fabric_ids:
+# This creates for EACH GMF ID (either provided in gpu_memory_fabric_ids or all available healthy GMFs if empty):
 # 1. A Compute Cluster (RDMA network group)
 # 2. An Instance Configuration (via instanceconfig.tf, shared with cluster-network mode)
 # 3. A GMC that provisions instances within the compute cluster using the GMF
 
-# Query available GMFs for reference (used for available_host_count lookup)
+# Query available GMFs (used for available_host_count lookup and as fallback when no GMF IDs are provided)
 data "oci_core_compute_gpu_memory_fabrics" "available" {
   for_each = local.enabled_gpu_memory_clusters
 
@@ -22,10 +22,20 @@ data "oci_core_compute_gpu_memory_fabrics" "available" {
 
 # Local to create a map of GMF instances based on the provided gpu_memory_fabric_ids list
 locals {
-  # Create a map for each GMF ID provided in the pool config: { "pool_name-0" => { pool_config, gmf_id, index } }
+  # Get the list of GMF IDs to use for each pool: use provided list if not empty, otherwise use all available GMFs
+  effective_gmf_ids = {
+    for pool_name, pool_config in local.enabled_gpu_memory_clusters :
+    pool_name => length(lookup(pool_config, "gpu_memory_fabric_ids", [])) > 0 ? lookup(pool_config, "gpu_memory_fabric_ids", []) : [
+      for gmf in try(data.oci_core_compute_gpu_memory_fabrics.available[pool_name].compute_gpu_memory_fabric_collection[0].items, []) :
+      gmf.compute_gpu_memory_fabric_id
+    ]
+  }
+
+  # Create a map for each GMF ID: { "pool_name-0" => { pool_config, gmf_id, index } }
+  # If gpu_memory_fabric_ids is empty, uses all available healthy GMFs from the data source
   all_gmfs = merge([
     for pool_name, pool_config in local.enabled_gpu_memory_clusters : {
-      for idx, gmf_id in lookup(pool_config, "gpu_memory_fabric_ids", []) :
+      for idx, gmf_id in local.effective_gmf_ids[pool_name] :
       "${pool_name}-${idx}" => {
         pool_name           = pool_name
         pool_config         = pool_config
