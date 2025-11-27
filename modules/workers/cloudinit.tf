@@ -96,34 +96,12 @@ data "cloudinit_config" "workers" {
     }
   }
 
-  # Disable CRI-O enforce shortnames mode (for versions greater than 1.34)
-  dynamic "part" {
-    for_each = tonumber(split(".", each.value.kubernetes_version)[1]) >= 34 && var.allow_short_container_image_names ? [1] : []
-    content {
-      content_type = "text/cloud-config"
-      content = jsonencode({
-        write_files = [
-          {
-            content = <<-EOT
-            [crio.image]
-            short_name_mode = "disabled"
-            EOT
-            path    = "/etc/crio/crio.conf.d/11-default.conf"
-          }
-        ]
-      })
-      filename   = "50-crio-config.yml"
-      merge_type = local.default_cloud_init_merge_type
-    }
-  }
-
-
   # OKE setup and initialization for Ubuntu images
   dynamic "part" {
     for_each = !each.value.disable_default_cloud_init && lookup(local.ubuntu_worker_pools, each.key, null) != null ? [1] : []
     content {
       content_type = "text/x-shellscript"
-      content      = templatefile(
+      content = templatefile(
         "${path.module}/cloudinit-ubuntu.sh.tftpl",
         {
           version_codename  = lookup(local.ubuntu_supported_versions, lookup(lookup(local.ubuntu_worker_pools, each.key, {}), "ubuntu_release", lookup(each.value, "os_version")), "unsupported_ubuntu_version"),
@@ -131,8 +109,8 @@ data "cloudinit_config" "workers" {
           oke_minor_version = lookup(lookup(local.ubuntu_worker_pools, each.key, {}), "kubernetes_minor_version", "")
         }
       )
-      filename     = "50-oke-ubuntu.sh"
-      merge_type   = local.default_cloud_init_merge_type
+      filename   = "50-oke-ubuntu.sh"
+      merge_type = local.default_cloud_init_merge_type
     }
   }
 
@@ -195,7 +173,7 @@ data "cloudinit_config" "workers" {
     precondition {
       condition = lookup(local.ubuntu_worker_pools, each.key, null) == null || (
         lookup(local.ubuntu_worker_pools, each.key, null) != null &&
-          contains(keys(local.ubuntu_supported_versions), lookup(lookup(local.ubuntu_worker_pools, each.key, {}), "ubuntu_release", ""))
+        contains(keys(local.ubuntu_supported_versions), lookup(lookup(local.ubuntu_worker_pools, each.key, {}), "ubuntu_release", ""))
       )
       error_message = <<-EOT
       Supported Ubuntu versions are "22.04" and "24.04".
