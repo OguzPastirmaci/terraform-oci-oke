@@ -100,6 +100,12 @@ variable "cni_type" {
   }
 }
 
+variable "enable_ipv6" {
+  default     = false
+  description = "Whether to create a dual-stack (IPv4/IPv6) cluster."
+  type        = bool
+}
+
 variable "pod_subnet_id" { type = string }
 variable "worker_subnet_id" { type = string }
 

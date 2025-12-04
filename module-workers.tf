@@ -49,7 +49,7 @@ module "workers" {
 
   # Workers
   assign_dns                     = var.assign_dns
-  assign_public_ip               = var.enable_ipv6 == true ? true : var.worker_is_public
+  assign_public_ip               = var.enable_ipv6 ? true : var.worker_is_public
   block_volume_type              = var.worker_block_volume_type
   capacity_reservation_id        = var.worker_capacity_reservation_id
   cloud_init                     = var.worker_cloud_init
@@ -78,6 +78,7 @@ module "workers" {
   worker_nsg_ids                 = concat(var.worker_nsg_ids, [try(module.network.worker_nsg_id, null)])
   worker_subnet_id               = try(module.network.worker_subnet_id, "") # safe destroy; validated in submodule
   preemptible_config             = var.worker_preemptible_config
+  enable_ipv6                    = var.enable_ipv6
 
   # Tagging
   tag_namespace    = var.tag_namespace
