@@ -49,7 +49,7 @@ module "workers" {
 
   # Workers
   assign_dns                     = var.assign_dns
-  assign_public_ip               = var.worker_is_public
+  assign_public_ip               = var.enable_ipv6 == true ? true : var.worker_is_public
   block_volume_type              = var.worker_block_volume_type
   capacity_reservation_id        = var.worker_capacity_reservation_id
   cloud_init                     = var.worker_cloud_init
