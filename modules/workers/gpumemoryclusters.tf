@@ -17,7 +17,7 @@ data "oci_core_compute_gpu_memory_fabrics" "available" {
 
   # Filter for healthy and occupied fabrics (OCCUPIED for testing, change to AVAILABLE for production)
   compute_gpu_memory_fabric_health          = "HEALTHY"
-  compute_gpu_memory_fabric_lifecycle_state = "AVAILABLE"
+  compute_gpu_memory_fabric_lifecycle_state = "OCCUPIED"
 }
 
 # Local to create a map of GMF instances based on the provided gpu_memory_fabric_ids list
