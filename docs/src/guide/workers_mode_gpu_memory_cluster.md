@@ -9,8 +9,42 @@ Configured with `mode = "gpu-memory-cluster"` on a `worker_pools` entry, or by s
 
 ## Usage
 
-```javascript
-{{#include ../../../examples/workers/vars-workers-gpu-memory-cluster.auto.tfvars:4:}}
+```hcl
+worker_pools = {
+  gpu-memory-cluster-workers = {
+    description = "Self-managed GPU workers sharing a GPU memory fabric"
+
+    mode = "gpu-memory-cluster"
+    size = 2
+
+    compartment_id = "ocid1.compartment.oc1..exampleuniqueID"
+    subnet_id      = "ocid1.subnet.oc1..exampleuniqueID"
+
+    placement_ads = [1]
+    shape                   = "BM.GPU.GB200.4"
+    image_type              = "custom"
+    image_id                = "ocid1.image.oc1..exampleuniqueID"
+    boot_volume_size        = 200
+    boot_volume_vpus_per_gb = 20
+    ocpus                   = 8
+    memory                  = 512
+    placement_ad            = 1
+
+    gpu_memory_fabric_ids = [
+      "ocid1.gpumemoryfabric.oc1..exampleuniqueID1",
+      "ocid1.gpumemoryfabric.oc1..exampleuniqueID2"
+    ]
+
+    cloud_init = [
+      {
+        content = <<-EOT
+#!/usr/bin/env bash
+echo "Configuring GPU memory workers"
+EOT
+      }
+    ]
+  }
+}
 ```
 
 ## References

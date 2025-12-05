@@ -2,10 +2,10 @@
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl
 
 # GPU Memory Clusters (GMC) for worker pools with mode = "gpu-memory-cluster"
-# This creates for EACH GMF ID (either provided in gpu_memory_fabric_ids or all available healthy GMFs if empty):
-# 1. A Compute Cluster (RDMA network group)
-# 2. An Instance Configuration (via instanceconfig.tf, shared with cluster-network mode)
-# 3. A GMC that provisions instances within the compute cluster using the GMF
+# This creates:
+# 1. One Compute Cluster (RDMA network group) per pool - shared by all GMFs in that pool
+# 2. An Instance Configuration per pool (via instanceconfig.tf, shared with cluster-network mode)
+# 3. A GMC for each GMF ID (either provided in gpu_memory_fabric_ids or all available healthy GMFs if empty)
 
 # Query available GMFs (used for available_host_count lookup and as fallback when no GMF IDs are provided)
 data "oci_core_compute_gpu_memory_fabrics" "available" {
@@ -56,15 +56,15 @@ locals {
   }
 }
 
-# Create Compute Clusters for each GMF
+# Create one Compute Cluster per pool (shared by all GMFs in that pool)
 resource "oci_core_compute_cluster" "gpu_memory_cluster" {
-  for_each       = local.all_gmfs
-  compartment_id = each.value.pool_config.compartment_id
+  for_each       = local.enabled_gpu_memory_clusters
+  compartment_id = each.value.compartment_id
   display_name   = format("%s-compute-cluster", each.key)
-  defined_tags   = each.value.pool_config.defined_tags
-  freeform_tags  = each.value.pool_config.freeform_tags
+  defined_tags   = each.value.defined_tags
+  freeform_tags  = each.value.freeform_tags
 
-  availability_domain = each.value.availability_domain
+  availability_domain = lookup(each.value, "placement_ad", null) != null ? lookup(var.ad_numbers_to_names, lookup(each.value, "placement_ad")) : element(each.value.availability_domains, 0)
 
   lifecycle {
     ignore_changes = [
@@ -73,14 +73,14 @@ resource "oci_core_compute_cluster" "gpu_memory_cluster" {
   }
 }
 
-# Create GMCs for each GMF
+# Create GMCs for each GMF (all GMFs in a pool share the same compute cluster)
 resource "oci_core_compute_gpu_memory_cluster" "workers" {
   for_each = local.all_gmfs
 
   # Required
-  availability_domain       = oci_core_compute_cluster.gpu_memory_cluster[each.key].availability_domain
+  availability_domain       = oci_core_compute_cluster.gpu_memory_cluster[each.value.pool_name].availability_domain
   compartment_id            = each.value.pool_config.compartment_id
-  compute_cluster_id        = oci_core_compute_cluster.gpu_memory_cluster[each.key].id
+  compute_cluster_id        = oci_core_compute_cluster.gpu_memory_cluster[each.value.pool_name].id
   instance_configuration_id = oci_core_instance_configuration.workers[each.value.pool_name].id
 
   # Size - use pool size if explicitly set (> 0), otherwise use available_host_count from GMF
