@@ -267,7 +267,10 @@ locals {
   worker_virtual_node_pools  = { for k, v in oci_containerengine_virtual_node_pool.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
   worker_instance_pools      = { for k, v in merge(oci_core_instance_pool.tfscaled_workers, oci_core_instance_pool.autoscaled_workers) : k => merge(lookup(local.worker_pools_final, k, {}), v) }
   worker_cluster_networks    = { for k, v in oci_core_cluster_network.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
-  worker_gpu_memory_clusters = { for k, v in oci_core_compute_gpu_memory_cluster.workers : k => merge(lookup(local.worker_pools_final, local.all_gmfs[k].pool_name, {}), v) }
+  worker_gpu_memory_clusters = merge(
+    { for k, v in oci_core_compute_gpu_memory_cluster.explicit : k => merge(lookup(local.worker_pools_final, local.explicit_gmfs[k].pool_name, {}), v) },
+    { for idx, v in oci_core_compute_gpu_memory_cluster.discovered : "${local.discovered_gmfs_list[idx].pool_name}-${local.discovered_gmfs_list[idx].gmf_index}" => merge(lookup(local.worker_pools_final, local.discovered_gmfs_list[idx].pool_name, {}), v) },
+  )
   worker_instances           = { for k, v in oci_core_instance.workers : k => merge(lookup(local.worker_pools_final, k, {}), v) }
 
   # Combined map of outputs by pool name for all modes excluding 'instance' (output separately)
