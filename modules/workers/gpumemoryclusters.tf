@@ -15,7 +15,7 @@ data "oci_core_compute_gpu_memory_fabrics" "available" {
   compartment_id      = var.tenancy_id
   availability_domain = lookup(each.value, "placement_ad", null) != null ? lookup(var.ad_numbers_to_names, lookup(each.value, "placement_ad")) : element(each.value.availability_domains, 0)
 
-  # Filter for healthy and occupied fabrics (OCCUPIED for testing, change to AVAILABLE for production)
+  # Filter for healthy and occupied fabrics
   compute_gpu_memory_fabric_health          = "HEALTHY"
   compute_gpu_memory_fabric_lifecycle_state = "AVAILABLE"
 }
