@@ -17,7 +17,7 @@ data "oci_core_compute_gpu_memory_fabrics" "available" {
 
   # Filter for healthy and available fabrics
   compute_gpu_memory_fabric_health          = "HEALTHY"
-  compute_gpu_memory_fabric_lifecycle_state = "OCCUPIED"
+  compute_gpu_memory_fabric_lifecycle_state = "AVAILABLE"
 }
 
 locals {
