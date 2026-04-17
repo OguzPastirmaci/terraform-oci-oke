@@ -253,11 +253,6 @@ locals {
     for k, v in local.enabled_worker_pools : k => v if lookup(v, "mode", "") == "gpu-memory-cluster"
   }
 
-  # Dedup'd set of GMF OCIDs across all enabled gpu-memory-cluster pools, used to drive the fabric data source for_each
-  enabled_gmc_fabric_ids = toset(flatten([
-    for k, v in local.enabled_gmc_pools : lookup(v, "gpu_memory_fabric_ids", [])
-  ]))
-
   # Map keyed by "<pool_name>###<gmf_id>" of merged pool config + pool_name + gpu_memory_fabric_id, used to drive the GMC resource for_each.
   # Keying off OCID (not list index) keeps adds/removes stable.
   enabled_gmc_fabric_map = { for entry in flatten([
