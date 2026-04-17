@@ -29,7 +29,7 @@ resource "oci_core_compute_gpu_memory_cluster" "workers" {
   compute_cluster_id        = oci_core_compute_cluster.gmc[each.value.pool_name].id
   instance_configuration_id = oci_core_instance_configuration.workers[each.value.pool_name].id
   gpu_memory_fabric_id      = each.value.gpu_memory_fabric_id
-  display_name              = format("%s-%s", each.value.pool_name, substr(each.value.gpu_memory_fabric_id, -12, 12))
+  display_name              = format("%s-%s", each.value.pool_name, substr(each.value.gpu_memory_fabric_id, -11, 11))
 
   defined_tags  = each.value.defined_tags
   freeform_tags = each.value.freeform_tags
