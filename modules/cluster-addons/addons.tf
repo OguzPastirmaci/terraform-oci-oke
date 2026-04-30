@@ -7,7 +7,7 @@ data "oci_containerengine_addon_options" "k8s_addon_options" {
 
 locals {
   supported_addons = [for entry in data.oci_containerengine_addon_options.k8s_addon_options.addon_options : entry.name]
-  primary_addons   = ["CertManager"]
+  primary_addons   = ["CertManager", "NodeFeatureDiscovery"]
   addons_defaults = {
     remove_addon_resources_on_delete = true
     configurations                   = []
